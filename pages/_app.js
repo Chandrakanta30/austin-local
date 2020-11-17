@@ -15,10 +15,7 @@ const client = new ApolloClient({
 class MyApp extends App {
   render() {
     const { Component, pageProps } = this.props;
-    // const shopOrigin = Cookies.get("shopOrigin");
-    // const access_token = Cookies.get("accessToken");
-  //   const config = { apiKey: API_KEY, shopOrigin: Cookies.get("shopOrigin"), forceRedirect: true };
-  // console.log(config);
+    const shopOrigin = Cookies.get("shopOrigin");
 
     return (
       <Container>
@@ -26,8 +23,7 @@ class MyApp extends App {
           <Provider
             config={{
               apiKey: API_KEY,
-              shopOrigin: "custom-app-dev.myshopify.com",
-              access_token:"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",
+              shopOrigin: 'custom-app-dev.myshopify.com',
               forceRedirect: true,
             }}
           >

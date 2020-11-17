@@ -30,6 +30,8 @@ import Icon from '@material-ui/core/Icon';
 import clsx from 'clsx';
 import { withStyles } from '@material-ui/core/styles';
 import LinearProgress from '@material-ui/core/LinearProgress';
+import ArrowBackIosIcon from '@material-ui/icons/ArrowBackIos';
+import TablePagination from '@material-ui/core/TablePagination';
 
 const axios = require('axios');
 const styles = {
@@ -91,14 +93,15 @@ class Index extends Component {
       list: [],
       product_images:[],
       anchorEl:null,
-      orderStatusList:[],
       orderDetails: false,
       orderDetailsData:{},
       isHidden:false,
       loaderStatus:false,
-      
+      page:0,
+      rowsPerPage:1
     }
-    this.handleEvent = this.handleEvent.bind(this)
+    this.handleEvent = this.handleEvent.bind(this);
+  
   }
 
   async componentDidMount() {
@@ -113,33 +116,30 @@ class Index extends Component {
         // async res.data.ordes_list.forEach(ele=>{
         //   await ele.
         // })
-        res.data.ordes_list.forEach((ele,index) =>{
-
-        axios.get('https://dev.imprintnext.io/austin/wc/designer/api/v1/vendor-order/order-status/'+ele.id)
-          .then((response) => {
-            console.log(response.data.status);
-            if(response.data.status==1){
-              console.log(response.data.data.order_status);
-              ele.orderstatus=response.data.data.order_status;
-            }
-          });
-
-
-        })
-
         this.setState({
           list:res.data.ordes_list,
           loaderStatus:false
           })
           console.log(this.state.list);
-    })
-    // Fetch ordderlist
-      axios.get('https://dev.imprintnext.io/austin/wc/designer/api/v1/vendor-order/status',config)
-      .then(res => {
-        this.setState({
-          orderStatusList:res.data.data
-          })
-          console.log(this.state.orderStatusList);
+        res.data.ordes_list.forEach(async (ele,index) =>{
+
+       await axios.get('https://dev.imprintnext.io/austin/wc/designer/api/v1/vendor-order/order-status/'+ele.id)
+          .then((response) => {
+            
+            if(response.data.status===1){
+              var temp=this.state.list;
+              console.log(response.data.status);
+              console.log(response.data.data.order_status);
+              ele.orderstatus=response.data.data.order_status;
+              temp[index].ordes_list=response.data.data.order_status;
+              this.setState({
+                list:temp
+                })
+            }
+          });
+        })
+        console.log(res.data.ordes_list);
+        
     })
   }
 
@@ -185,21 +185,7 @@ class Index extends Component {
          this.setState({isHidden:true});
       })
   }
-  customStatusUpdate=(event)=>{
-    const config = {     
-      headers: { 'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin' : '*',
-              'Access-Control-Allow-Methods' : 'GET,PUT,POST,DELETE,PATCH,OPTIONS', }
-      }
-      let formData = new FormData();
-    formData.append('type','order');
-    formData.append('status',event.target.value);
 
-    axios.post('https://dev.imprintnext.io/austin/wc/designer/api/v1/vendor-order/order-status/'+event.target.name,formData,config)
-      .then(res => {
-          console.log(res.data);
-    })
-  }
   camelize=(str)=>{
     if(str=='paid'){
       return 'Paid';
@@ -219,6 +205,14 @@ class Index extends Component {
       return "Undefined";
     }
   }
+  handleChangePage=(event, newPage)=>{
+   this.setState({page:newPage});
+  }
+  handleChangeRowsPerPage=(event)=>{
+    console.log("handleChangeRowsPerPage");
+    this.setState({page:0,rowsPerPage:event.target.value});
+
+  }
   getCurrentOrderSatatus=(index)=>{
     console.log(this.state.list[index].id);
     axios.get('https://dev.imprintnext.io/austin/wc/designer/api/v1/vendor-order/order-status/'+this.state.list[index].id)
@@ -232,12 +226,6 @@ class Index extends Component {
         list:temp
       });
     }
-    // console.log(response.status);
-    // console.log(response.statusText);
-    // console.log(response.headers);
-    // console.log(response.config);
-
-    // return "pending";
   });
   }
   
@@ -245,7 +233,11 @@ class Index extends Component {
     const { classes, children, className, ...other } = this.props;
    return (
     <Grid item xs={12} >
-    <Button style={{ "float": "right" }} onClick={this.showOrderListing}>Back</Button>
+     
+    <Button variant="contained"
+        color="#bdbdbd"
+        endIcon={<ArrowBackIosIcon />}
+         style={{ "float": "right" }} onClick={this.showOrderListing}></Button>
     <Grid container justify="center">
      {/* customer detials */}
         <Grid item xs={4}>
@@ -324,18 +316,6 @@ class Index extends Component {
                        <br/>{this.state.orderDetailsData.billing_address.city},{this.state.orderDetailsData.billing_address.province},
                        <br/>{this.state.orderDetailsData.billing_address.country},{this.state.orderDetailsData.billing_address.zip}</p>
                       </div>
-                      {/* <div className={classes.mb_20}>
-                       <label className={classes.label}> Customer address: </label>
-                        <p className={classes.text}>{this.state.orderDetailsData.billing_address.address1},{this.state.orderDetailsData.billing_address.address2},{this.state.orderDetailsData.billing_address.city},{this.state.orderDetailsData.billing_address.province}</p>
-                      </div>
-                      <div className={classes.mb_20}>
-                       <label className={classes.label}> Customer Address:</label>
-                        <p className={classes.text}>{this.state.orderDetailsData.billing_address.country},{this.state.orderDetailsData.billing_address.zip}</p>
-                      </div>
-                      <div className={classes.mb_20}>
-                       <label className={classes.label}> Total price:</label>
-                        <p className={classes.text}>{this.state.orderDetailsData.total_price}</p>
-                      </div> */}
                    </Typography>
                 </CardContent>
             </Card>
@@ -347,27 +327,26 @@ class Index extends Component {
                  <CardContent>
                 <Grid container justify="center">
                     <Grid item xs={4}  spacing={2}>
-                    {this.state.product_images.map((row) => (
                         <img style={{width: '250px'}}  src={this.state.product_images[i].src}></img>
-                      ))}
+                      
                     </Grid>
                     <Grid item xs={8}  spacing={2}>
                     <Typography className={classes.table_head} color="textSecondary" gutterBottom>
                        Order details
                     </Typography>
-                    <Typography variant="p" component="p">
+                    <Typography >
                     <div className={classes.mb_20}>
                        <label className={classes.label}>Product id:</label>
                         <p className={classes.text}>{row.variant_id}</p>
-                      </div>
-                      <div className={classes.mb_20}>
+                    </div>
+                    <div className={classes.mb_20}>
                        <label className={classes.label}>Product title:</label>
                         <p className={classes.text}>{row.title}</p>
-                      </div>
-                      <div className={classes.mb_20}>
+                    </div>
+                    <div className={classes.mb_20}>
                        <label className={classes.label}> Quantity:</label>
                         <p className={classes.text}>{row.quantity}</p>
-                      </div>
+                    </div>
                     </Typography>
                     </Grid>
                   </Grid>
@@ -383,11 +362,6 @@ class Index extends Component {
    );
 }
   OrderListView=()=>{
-    // const classes = makeStyles({
-    //     table: {
-    //       minWidth: 650,
-    //     },
-    //   });
       const noPointer = {cursor: 'default'};
       const cardStyle = makeStyles({
           root: {
@@ -404,16 +378,18 @@ class Index extends Component {
           pos: {
             marginBottom: 12,
           },
+          pageroor:{
+            width: '100%',
+          }
           
         });
         const bull = <span className={cardStyle.bullet}>•</span>;
         const { classes, children, className, ...other } = this.props;
         const {list} = this.state;
+        
         return (
             <>
-            {/* <Button className={clsx(classes.root)}>
-      Chandrakanta
-    </Button>  */}
+            <Paper className={cardStyle.pageroor}>
             <TableContainer component={Paper}>
             <Table  aria-label="Orders List">
               <TableHead>
@@ -421,22 +397,20 @@ class Index extends Component {
                   <TableCell className={classes.table_head}>Order Id</TableCell>
                   <TableCell className={classes.table_head}>User name</TableCell>
                   <TableCell className={classes.table_head}>Total price</TableCell>
-                  <TableCell className={classes.table_head}>No of items</TableCell>
                   <TableCell className={classes.table_head}>Store Order status</TableCell>
                   <TableCell className={classes.table_head}>Imprintnext Order Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody style={noPointer} >
-                {this.state.list.map((row,index) => (
+                {this.state.list.length > 0 && this.state.list.slice(this.state.page * this.state.rowsPerPage, this.state.page * this.state.rowsPerPage + this.state.rowsPerPage).map((row,index) => (
                   <TableRow key={row.id} style={noPointer}>
                     <TableCell  className={classes.table} onClick={() => this.loadOrderDetailsById(row.id)}>
-                      {row.id}
+                      {row.order_number}
                     </TableCell> 
                     <TableCell className={classes.table} component="th" scope="row"  onClick={() => this.loadOrderDetailsById(row.id)}>
                       {row.customer.first_name} {row.customer.last_name}
                     </TableCell>
                     <TableCell className={classes.table} onClick={() => this.loadOrderDetailsById(row.id)}>{row.currency} {row.total_price}</TableCell>
-                    <TableCell className={classes.table} onClick={() => this.loadOrderDetailsById(row.id)}>{row.line_items.length}</TableCell>
                    
                     <TableCell className={classes.table}> {row.cancelled_at ? "Cancelled":this.camelize(row.financial_status)} </TableCell>
                     <TableCell className={classes.table}> {row.orderstatus}
@@ -444,9 +418,33 @@ class Index extends Component {
                   </TableRow>
                 ) )
                 }
+                {this.state.list.length == 0 && 
+                  <TableRow style={noPointer}>
+                    <TableCell  className={classes.table}>
+                      No Orders found
+                    </TableCell> 
+                    
+                  </TableRow>
+              
+                }
+
+
               </TableBody>
             </Table>
           </TableContainer>
+
+          <TablePagination
+        rowsPerPageOptions={[10,25,30]}
+        component="div"
+        count={this.state.list.length}
+        rowsPerPage={this.state.rowsPerPage}
+        page={this.state.page}
+        onChangePage={this.handleChangePage}
+        onChangeRowsPerPage={this.handleChangeRowsPerPage}
+      />
+
+
+      </Paper>
           </>
         )
 
